@@ -128,7 +128,6 @@ async fn main() -> std::io::Result<()> {    let device_map: DeviceMap = Arc::new
     println!("🚀 Server starting at http://127.0.0.1:8080");
     println!("📡 POST /api/upload - Upload device status");
     println!("📡 GET  /api/status/{{device_id}} - Get device status");
-    println!("🌐 Web UI at http://127.0.0.1:8080");
 
     HttpServer::new(move || {
         let cors = Cors::default()
@@ -142,7 +141,6 @@ async fn main() -> std::io::Result<()> {    let device_map: DeviceMap = Arc::new
             .app_data(web::Data::new(device_map.clone()))
             .service(upload_device_status)
             .service(get_device_status)
-            .service(fs::Files::new("/", "./static").index_file("index.html"))
     })
     .bind(("127.0.0.1", 8080))?
     .run()
