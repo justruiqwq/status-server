@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备状态监控 - Device Status</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .devices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 24px;
+            margin-top: 30px;
+        }
+
+        .device-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .device-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .device-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .device-card.alive::before {
+            background: linear-gradient(90deg, #11998e, #38ef7d);
+        }
+
+        .device-card.dead::before {
+            background: linear-gradient(90deg, #eb3349, #f45c43);
+        }
+
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .device-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-badge.alive {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status-badge.dead {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .status-icon {
+            font-size: 1.2rem;
+        }
+
+        .device-info {
+            margin-top: 16px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #4a5568;
+            min-width: 100px;
+        }
+
+        .info-value {
+            color: #2d3748;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            background: #f7fafc;
+            padding: 4px 8px;
+            border-radius: 4px;
+            flex: 1;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            color: #e53e3e;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .error-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .refresh-btn:active {
+            transform: translateY(0);
+        }
+
+        .last-update {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            opacity: 0.8;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: white;
+            padding: 60px 20px;
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🖥️ 设备状态监控</h1>
+            <p class="subtitle">实时监控设备运行状态</p>
+        </header>
+
+        <div id="app">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>正在加载设备信息...</p>
+            </div>
+        </div>
+
+        <div class="last-update" id="lastUpdate"></div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        const DEVICES = ['Phone', 'PC', 'Laptop']; // 添加你要监控的设备ID
+        let lastUpdateTime = null;
+
+        async function fetchDeviceStatus(deviceId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/status/${deviceId}`);
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        return null;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                return data.success ? data : null;
+            } catch (error) {
+                console.error(`Error fetching ${deviceId}:`, error);
+                return null;
+            }
+        }
+
+        async function loadAllDevices() {
+            const results = await Promise.all(
+                DEVICES.map(id => fetchDeviceStatus(id))
+            );
+            
+            const devices = results.filter(d => d !== null);
+            renderDevices(devices);
+            lastUpdateTime = new Date();
+            updateLastUpdateTime();
+        }
+
+        function renderDevices(devices) {
+            const app = document.getElementById('app');
+            
+            if (devices.length === 0) {
+                app.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <h2>暂无设备数据</h2>
+                        <p>等待设备上报状态...</p>
+                        <button class="refresh-btn" onclick="loadAllDevices()">🔄 刷新</button>
+                    </div>
+                `;
+                return;
+            }
+
+            const devicesHTML = devices.map(device => {
+                const statusClass = device.status === 'alive' ? 'alive' : 'dead';
+                const statusText = device.status === 'alive' ? '活着喵 😸' : '死了喵 😿';
+                const statusIcon = device.status === 'alive' ? '✅' : '❌';
+                
+                return `
+                    <div class="device-card ${statusClass}">
+                        <div class="device-header">
+                            <div class="device-name">${device.device_id}</div>
+                            <div class="status-badge ${statusClass}">
+                                <span class="status-icon">${statusIcon}</span>
+                                ${statusText}
+                            </div>
+                        </div>
+                        <div class="device-info">
+                            <div class="info-row">
+                                <div class="info-label">运行程序</div>
+                                <div class="info-value">${device.exe || '未知'}</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">状态</div>
+                                <div class="info-value">${device.status}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            app.innerHTML = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <button class="refresh-btn" onclick="loadAllDevices()">🔄 刷新数据</button>
+                </div>
+                <div class="devices-grid">
+                    ${devicesHTML}
+                </div>
+            `;
+        }
+
+        function updateLastUpdateTime() {
+            if (lastUpdateTime) {
+                const elem = document.getElementById('lastUpdate');
+                elem.textContent = `最后更新: ${lastUpdateTime.toLocaleString('zh-CN')}`;
+            }
+        }
+
+        // 初始加载
+        loadAllDevices();
+
+        // 每30秒自动刷新
+        setInterval(loadAllDevices, 30000);
+
+        // 每秒更新时间显示
+        setInterval(updateLastUpdateTime, 1000);
+    </script>
+</body>
+</html>
